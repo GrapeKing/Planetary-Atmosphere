@@ -43,8 +43,7 @@ void Analysis (const Data *d, Grid *grid)
   sprintf (fname, "%s/density.txt",RuntimeGet()->output_dir);
   fp = fopen(fname,"w");
   DOM_LOOP(k,j,i){
-    
-    fprintf(fp,"%.1e\n",k);
+    fprintf(fp,"%.4e\n",d->Vc[RHO][k][j][i]);
   }
   fclose(fp);
   printf("lol");
