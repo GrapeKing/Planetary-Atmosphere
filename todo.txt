@@ -1,0 +1,3 @@
+_Define optimal settings: grid (boundaries, type of grid, resolution), integration scheme (solver, timestepping,...), boundary conditions (X1_BEG & X1_END, RHO & VX1)
+_Enable data analysis: adapt the data exportation method to visualize the evolution of the system (radial profiles over time, density & velocity), prepare a script to read these files, verify the quality of the results and produce figures
+_include the gas mass in the gravitational potential by radial integration, check
