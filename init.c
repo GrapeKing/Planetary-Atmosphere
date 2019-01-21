@@ -28,7 +28,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   if (side == X1_END){
       BOX_LOOP(box,k,j,i){
         d->Vc[RHO][k][j][i] = exp(1.0/4.0);
-        
+    }
+  }
+  if (side == X1_BEG){
+      BOX_LOOP(box,k,j,i){
+        d->Vc[VX1][k][j][i] = 0.0;
     }
   }
 }
