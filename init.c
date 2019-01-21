@@ -13,11 +13,7 @@ void Init (double *v, double x1, double x2, double x3)
 void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) 
 {
   int   i, j, k;
-  double  *x1, *x2, *x3;
-
-  x1 = grid->x[IDIR];
-  x2 = grid->x[JDIR];
-  x3 = grid->x[KDIR];
+  double  *x1 = grid->x[IDIR];
   
   // Will: so you are prescribing the density at the outer radial boundary
   // but not the velocity, so the gas may well be flowing through the domain,
@@ -27,7 +23,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // (you can use the preset 'reflective', or (my advice) encode it yourself here
   if (side == X1_END){
       BOX_LOOP(box,k,j,i){
-        d->Vc[RHO][k][j][i] = exp(1.0/4.0);
+        d->Vc[RHO][k][j][i] = exp(4.0/x1[i]);
     }
   }
   if (side == X1_BEG){
@@ -48,9 +44,11 @@ void InitDomain (Data *d, Grid *grid)
 
 void Analysis (const Data *d, Grid *grid)
 {
+  double  *x1 = grid->x[IDIR];
   int i,j,k;
   char fname[512];
   FILE *fp;
+  
   sprintf (fname, "%s/density.txt",RuntimeGet()->output_dir);
   // Will: open with "a" to add new rows at the end of the file, 
   // if you store the data row-wise (one space instead of a new line between every element)
@@ -59,6 +57,13 @@ void Analysis (const Data *d, Grid *grid)
   fp = fopen(fname,"w"); 
   DOM_LOOP(k,j,i){
     fprintf(fp,"%.4e\n",d->Vc[RHO][k][j][i]);
+  }
+  fclose(fp);
+  
+  sprintf (fname, "%s/error.txt",RuntimeGet()->output_dir);
+  fp = fopen(fname,"w"); 
+  DOM_LOOP(k,j,i){
+    fprintf(fp,"%.4e\n",exp(4.0/x1[i])-d->Vc[RHO][k][j][i]);
   }
   fclose(fp);
   printf("lol");
