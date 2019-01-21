@@ -1,0 +1,22 @@
+A few comments about files I cannot / should not comment directly (pluto.ini, definitions.h, makefile) because they are overwritten every time you call 'python $PLUTO_DIR/setup.py'.
+
+PLUTO.INI
+---------
+
+_you can play a bit with the different solvers once your basic code is working; the main properties to balance are accuracy versus robustness, which is essentially "how diffusive the solver is". The solver 'hll' will be very diffusive (robust but inaccurate), the 'roe' solver will be quite accurate (but may crash in extreme conditions).
+
+
+DEFINITIONS.H
+-------------
+
+_Don't hesitate to use a couple of USER_DEF_PARAMETERS to make things easier to tune; this can easily be done with 'python $PLUTO_DIR/setup.py"; if you require 1 user_def_parameter, you can give it a name (say BOB) in the following prompt, it will appear inside definitions.h as '#define BOB 0', it will appear in pluto.ini as 'BOB  0.0', you can tune the value in pluto.ini and PLUTO will read it everytime it starts running. To access the value of bob, just use the global variable 'g_inputParam[BOB]'.
+
+Note: every line starting with the '#' symbol is a pre-processsor directive, i.e. it is handled by the compiler. They can be helpful in many ways; for example, in the function init.c:Init you can select what piece of code will be used depending on the code settings:
+#if EOS == ISOTHERMAL
+g_isoSoundSpeed = 1.0; // must be defined in isothermal
+#elif EOS == IDEAL
+v[PRS] = 1.0; // must be defined when not isothermal, but must not be assigned when isothermal
+#else
+printf("I don't recognize this equation of state !\n");
+QUIT_PLUTO(1);
+#endif
