@@ -18,7 +18,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // Will: so you are prescribing the density at the outer radial boundary
   // but not the velocity, so the gas may well be flowing through the domain,
   // especially if you don't enforce a solid boundary condition at X1_BEG!
-  // 1. impose a boundary condition on VX1 as well,
+  // 1. impose a boundary condition on VX1 as well in the X1_END loop
   // 2. make sure the X1_BEG boundary prevents mass to pass through
   // (you can use the preset 'reflective', or (my advice) encode it yourself here
   if (side == X1_END){
@@ -26,6 +26,8 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[RHO][k][j][i] = exp(4.0/x1[i]);
     }
   }
+  // Will: same here, you should also impose a condition on RHO in the X1_BEG loop
+  // to make sure the boundary conditions are under control
   if (side == X1_BEG){
       BOX_LOOP(box,k,j,i){
         d->Vc[VX1][k][j][i] = 0.0;

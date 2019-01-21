@@ -4,6 +4,8 @@ PLUTO.INI
 ---------
 
 _you can play a bit with the different solvers once your basic code is working; the main properties to balance are accuracy versus robustness, which is essentially "how diffusive the solver is". The solver 'hll' will be very diffusive (robust but inaccurate), the 'roe' solver will be quite accurate (but may crash in extreme conditions).
+_you can use a logarithmic grid by replacing the "u" (for "uniform") into a "l+" (for logarithmically increasing); this will give you a higher resolution at smaller radii (+ some benefits, and few minor bad effects)
+_at the moment your analysis function is called every 1.0 time unit, you may want to export more data into that output file?
 
 
 DEFINITIONS.H
