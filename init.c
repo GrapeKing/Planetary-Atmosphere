@@ -2,19 +2,29 @@
 #include <stdlib.h>
 
 double *mass_gas = NULL;
-double *pos_grid = NULL;
-int num_div=0;
+double *pos_grid = NULL; // Will: is it useful at all?
+int num_div=0; // Will: see comment in Init()
 
 void Init (double *v, double x1, double x2, double x3)
 {
-  // Will: this is where you can use g_inputParam[BONDI] in place of 4.0, so you don't have to re-compile the code
-  // every time you want to sample a new value for the Bondi radius
+  // Count number of points in domain (uses fact this is 1D)
+  //num_div += 1;
+  // Will: this is not going to work, the Init function might be called several times per cell.
+  // The number of points in the domain is contained in grid->np_int[IDIR]
+  // you can find the attributes of the grid structure at
+  // http://plutocode.ph.unito.it/Doxygen/API-Reference_Guide/struct_grid.html
+
+  // Will: try & understand this:
+  static int first_call = 1;
+  if (first_call == 1) {
+    first_call = 0;
+    mass_gas = (double *) malloc(grid->np_int[IDIR]*sizeof(double));
+  }
+  
   v[RHO] = g_inputParam[RHOINF]*exp(g_inputParam[BONDI]/x1);
   v[VX1] = 0.0;
   g_isoSoundSpeed = g_inputParam[CS];
 
-  // Count number of points in domain (uses fact this is 1D)
-  num_div += 1;
 }
 
 void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
@@ -25,12 +35,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   double  *dy = grid->dx[JDIR];
   double  *dz = grid->dx[KDIR];
 
-  // Will: so you are prescribing the density at the outer radial boundary
+  // Will: you are prescribing the density at the outer radial boundary
   // but not the velocity, so the gas may well be flowing through the domain,
-  // especially if you don't enforce a solid boundary condition at X1_BEG!
-  // 1. impose a boundary condition on VX1 as well in the X1_END loop
-  // 2. make sure the X1_BEG boundary prevents mass to pass through
-  // (you can use the preset 'reflective', or (my advice) encode it yourself here
+  // especially if you don't enforce a solid boundary condition at X1_BEG. 
+  // 1. impose a boundary condition on RHO and VX1 at X1_BEG and X1_END
+  // 2. make sure the X1_BEG boundary prevents mass to pass through (not 'outflow' !)
   if (side == X1_END){
       BOX_LOOP(box,k,j,i){
         d->Vc[RHO][k][j][i] = g_inputParam[RHOINF]*exp(g_inputParam[BONDI]/x1[i]);
@@ -47,7 +56,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // Integrate the density profile
   pos_grid = x1;
   if (side == 0) {
+    // /!\ TOT_LOOP will loop over the ghost+active cells
+    // --> you should allocate mass_gas large enough to include the ghost cells (grid->np_tot[IDIR])
     TOT_LOOP(k,j,i) {
+      // Will: two things:
+      // 1. since you're doing 1D, the Y and Z coordinates are not really used,
+      // so you can/should remove the dy[j] and dz[k] parts to avoid generating
+      // weird results if you ever change the coordinate boundaries in pluto.ini
+      // 2. in spherical coordinates, the volume element is not dx*dy*dz; 
+      // since you are doing 1D, you have already integrated over the angles and all you need is
+      // dV = 4*M_PI*x[i]*x[i] * (grid->xr[i] - grid->xl[i])
       mass_gas[i] = d->Vc[RHO][k][j][i]*dx[i]*dy[j]*dz[k];
     }
   }
@@ -59,11 +77,19 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   int i,j,k,pos;
 
   // Find the mass of the envelope
+  // Will: so for every coordinate x1, you are loopîng over every cell index i
+  // i.e. a full N^2 complexity... you can optimize this in several ways
   TOT_LOOP(k,j,i) {
+    // Will: second problem: the BodyForceVector is actually computed at cell interfaces,
+    // i.e. not at the coordinates of cell centers, but at the edges grid->xr[IDIR][i]
+    // so in principle this condition will never be met. 
     if (pos_grid[i] == x1) {
       pos = i;
     }
   }
+  // Will: same thing, for every coordinate you are looping over every cell index,
+  // giving you N(N-1)/2 number of operations for N cells; 
+  // why not compute the integral just once in UserDefBoundary:side==0 ?
   for(i=0; i<=pos; ++i) {
     Mg += mass_gas[i];
   }
@@ -75,14 +101,14 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
 double BodyForcePotential(double x1, double x2, double x3)
 {
-  return 0; // Will: same advice about using user_def_parameters
+  // you can still use this function for the potential of the core if you want
+  // (better for conservative reasons)
+  return 0;
 }
 
-void InitDomain (Data *d, Grid *grid)
-{
-  // Create a global array to store the mass of the gas cloud
-  mass_gas = (double *) malloc(num_div*sizeof(double));
-}
+
+void InitDomain (Data *d, Grid *grid) {}
+
 
 void Analysis (const Data *d, Grid *grid)
 {
