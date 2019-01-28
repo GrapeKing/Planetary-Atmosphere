@@ -2,10 +2,7 @@
 #include <stdlib.h>
 
 double *mass_gas = NULL;
-double *tot_Mg = NULL;
 double *pos_grid = NULL;
-double _x1;
-int cnt=2;
 int num_div=0;
 
 void Init (double *v, double x1, double x2, double x3)
@@ -47,37 +44,21 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     }
   }
 
+  // Integrate the density profile
   pos_grid = x1;
   if (side == 0) {
     TOT_LOOP(k,j,i) {
       mass_gas[i] = d->Vc[RHO][k][j][i]*dx[i]*dy[j]*dz[k];
-      //printf("%f\n", mass_gas[i]);
     }
-    /*tot_Mg[0] = mass_gas[0];
-    TOT_LOOP(k,j,i) {
-      if (i==0) continue;
-      tot_Mg[i] = mass_gas[i] + tot_Mg[i-1];
-    }*/
   }
 }
 
-/*!
- * Prescribe the acceleration vector as a function of the coordinates
- * and the vector of primitive variables *v.
- *
- * \param [in] v  pointer to a cell-centered vector of primitive
- *                variables
- * \param [out] g acceleration vector
- * \param [in] x1  position in the 1st coordinate direction \f$x_1\f$
- * \param [in] x2  position in the 2nd coordinate direction \f$x_2\f$
- * \param [in] x3  position in the 3rd coordinate direction \f$x_3\f$
- *
- *********************************************************************** */
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   double Mc = g_inputParam[BONDI]*g_isoSoundSpeed*g_isoSoundSpeed/g_inputParam[G];
   double Mg = 0;
   int i,j,k,pos;
 
+  // Find the mass of the envelope
   TOT_LOOP(k,j,i) {
     if (pos_grid[i] == x1) {
       pos = i;
@@ -86,7 +67,6 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   for(i=0; i<=pos; ++i) {
     Mg += mass_gas[i];
   }
-  //printf("%d, %f\n", pos, Mg);
 
   g[IDIR] = -(Mc+Mg)*g_inputParam[G]/(x1*x1);
   g[JDIR] = 0.0;
@@ -95,26 +75,13 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
 double BodyForcePotential(double x1, double x2, double x3)
 {
-  double Mc = g_inputParam[BONDI]*g_isoSoundSpeed*g_isoSoundSpeed/g_inputParam[G];
-  double Mg = 0;
-  int i,j,k;
-
-  TOT_LOOP(k,j,i) {
-    if (pos_grid[i] == x1) {
-      Mg = tot_Mg[i];
-    }
-  }
-
   return 0; // Will: same advice about using user_def_parameters
 }
 
 void InitDomain (Data *d, Grid *grid)
 {
-  pos_grid = grid->x[IDIR];
-
   // Create a global array to store the mass of the gas cloud
   mass_gas = (double *) malloc(num_div*sizeof(double));
-  tot_Mg = (double *) malloc(num_div*sizeof(double));
 }
 
 void Analysis (const Data *d, Grid *grid)

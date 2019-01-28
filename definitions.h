@@ -31,3 +31,6 @@
 
 
 /* [End] user-defined constants (do not change this line) */
+/*
+Implemented radial mass profile as a global array, switched to vector force from potential, added contribution from mass of envelope
+*/
