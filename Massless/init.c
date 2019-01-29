@@ -15,10 +15,6 @@ void Init (double *v, double x1, double x2, double x3)
   fp = fopen(fname,"w");
   fclose(fp);
 
-  sprintf (fname, "%s/velocity.txt",RuntimeGet()->output_dir);
-  fp = fopen(fname,"w");
-  fclose(fp);
-
   sprintf (fname, "%s/coordinate.txt",RuntimeGet()->output_dir);
   fp = fopen(fname,"w");
   fclose(fp);
@@ -55,14 +51,6 @@ void Analysis (const Data *d, Grid *grid)
   fp = fopen(fname,"a");
   DOM_LOOP(k,j,i){
     fprintf(fp,"%.4e ",d->Vc[RHO][k][j][i]);
-  }
-  fprintf(fp,"\n");
-  fclose(fp);
-
-  sprintf (fname, "%s/velocity.txt",RuntimeGet()->output_dir);
-  fp = fopen(fname,"a");
-  DOM_LOOP(k,j,i){
-    fprintf(fp,"%.4e ",d->Vc[VX1][k][j][i]);
   }
   fprintf(fp,"\n");
   fclose(fp);
