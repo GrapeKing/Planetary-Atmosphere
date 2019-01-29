@@ -1,0 +1,8 @@
+Running the PLUTO code generates a "density.txt" file and a "coordinate.txt" file under the same directory, the first of which contains rows of density profile outputted at different times and second just a coordinate grid.
+
+Running "produce.py" under the same directory will generate a video file named "0_density.mp4" which should contain all data.
+
+A few potential problems:
+  1. The coordinate output was not optimised (it opens and writes the file many times since i have no idea how to make it stop...)
+  2. The animation code will try to make animation even after all data is used, and will give you error in the terminal for that. However the mp4 file will still be generated so I am not too worried.
+  3. The video could be truncated when a lot of data is exported, and the time range can be lengthened with a higher save_count

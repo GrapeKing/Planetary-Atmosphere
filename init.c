@@ -3,25 +3,20 @@
 
 double *mass_gas = NULL;
 double *tot_Mg = NULL;
-double *test;
-int num_div=0; // Will: see comment in Init()
+int num_div=0;
 
 void Init (double *v, double x1, double x2, double x3)
 {
-  // Count number of points in domain (uses fact this is 1D)
-  //num_div += 1;
-  // Will: this is not going to work, the Init function might be called several times per cell.
-  // The number of points in the domain is contained in grid->np_int[IDIR]
-  // you can find the attributes of the grid structure at
-  // http://plutocode.ph.unito.it/Doxygen/API-Reference_Guide/struct_grid.html
-
+  // Set initial conditions
   v[RHO] = g_inputParam[RHOINF]*exp(g_inputParam[BONDI]/x1);
   v[VX1] = 0.0;
+
+  // Set global sound speed
   g_isoSoundSpeed = g_inputParam[CS];
 }
 
 void InitDomain (Data *d, Grid *grid) {
-  // Will: try & understand this (the 'static' property and how it can be used):
+  // Allocate space for mass profile of atmosphere (only space for active domain)
   static int first_call = 1;
   if (first_call == 1) {
     first_call = 0;
@@ -33,10 +28,13 @@ void InitDomain (Data *d, Grid *grid) {
 
 
 void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
+
   int i, j, k;
   double *x1 = grid->x[IDIR];
   double dV;
   test=x1; // 
+
+  // Impose no flow at outer boundary and fixed density at infinity
 
   if (side == X1_END){
       BOX_LOOP(box,k,j,i){
@@ -60,7 +58,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
     }
   }
 
-  // Integrate the density profile
+  // Integrate the density profile over active cells
   if (side == 0) {
     // Will: you should still allocate mass_gas large enough to include the ghost cells (grid->np_tot[IDIR] instead of np_int)
     // since the DOM_LOOP will start at i=IBEG!=0, and finish at IEND=IBEG+np_int>np_int
@@ -85,12 +83,13 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   int i,j,k;
   static int pos=0;
 
+  // Keep track of current cell position
   if (pos >= num_div) {
     pos = 0;
   }
   Mg = tot_Mg[pos];
-  //printf("%d, %f %f\n", pos, Mg, test[pos+2]);
   ++pos;
+
   // Will: so pos=0 initially, then you increment pos+1 but you're not sure how many steps will be incremented, 
   // and then you never reset it to zero (that's the 'static' property), so this will eventually crash;
   // the cleanest way is to identify the cell index 'i' given its location 'x1', there are various ways to do this.
@@ -102,6 +101,7 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
 double BodyForcePotential(double x1, double x2, double x3)
 {
+  // Get gravitational potential from core
   return -g_inputParam[BONDI]*g_isoSoundSpeed*g_isoSoundSpeed/x1;
 }
 
