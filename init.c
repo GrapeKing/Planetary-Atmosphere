@@ -28,31 +28,45 @@ void InitDomain (Data *d, Grid *grid) {
 
 
 void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
-  int   i, j, k;
-  double  *x1 = grid->x[IDIR];
+
+  int i, j, k;
+  double *x1 = grid->x[IDIR];
+  double dV;
+  test=x1; // 
 
   // Impose no flow at outer boundary and fixed density at infinity
+
   if (side == X1_END){
       BOX_LOOP(box,k,j,i){
         d->Vc[RHO][k][j][i] = g_inputParam[RHOINF]*exp(g_inputParam[BONDI]/x1[i]);
-        d->Vc[VX1][k][j][i] = 0.0;
+        //d->Vc[VX1][k][j][i] = 0.0; // Lorenzo's
+	// Will: VX1=0 at the outer boundary is one possibility, since indeed you want the system to reach a steady state
+	// however if you set VX1=0 at both boundary (with the reflective condition at X1_BEG), then
+	// you are allowing sound waves to bounce back and forth through the domain, so you might obtain a relatively slow convergence
+	// + if the system wants to collapse, the X1_END boundary will somehow slow the infall.
+	// Suggestion: extrapolate the velocity field (try to understand the following):
+	d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1])/(x1[IEND] - x1[IEND-1])
     }
   }
-
-  // Boundary condition is reflective, all particles falling to the core will "bounce back"
+  // Will: you can keep this block even if you use 'reflective' in pluto.ini, 
   if (side == X1_BEG) {
       BOX_LOOP(box,k,j,i){
-        //d->Vc[VX1][k][j][i] = 0.0;
+	// Will's suggestions: symmetrizing the density (even parity), anti-symmetrizing the velocity (odd parity)
+	// (try to understand it! and of course, switch to 'userdef' in pluto.ini if you want to use it)
+        d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i];
+	d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i];
     }
   }
 
   // Integrate the density profile over active cells
   if (side == 0) {
+    // Will: you should still allocate mass_gas large enough to include the ghost cells (grid->np_tot[IDIR] instead of np_int)
+    // since the DOM_LOOP will start at i=IBEG!=0, and finish at IEND=IBEG+np_int>np_int
     DOM_LOOP(k,j,i) {
-      // Get volume cell in spherical coordinates
-      double dV = 4*M_PI*x1[i]*x1[i] * (grid->xr[IDIR][i] - grid->xl[IDIR][i]);
-
-      mass_gas[i-2] = d->Vc[RHO][k][j][i]*dV;
+      // volume element
+      dV = 4*M_PI*x1[i]*x1[i] * (grid->xr[IDIR][i] - grid->xl[IDIR][i]);
+      //printf("%f %f\n", dV, d->Vc[RHO][k][j][i]);
+      mass_gas[i-2] = d->Vc[RHO][k][j][i]*dV; // Will: allocate a size np_tot*sizeof(double) and start at i, that will avoid confusions later
 
       // Mass  profile goes from 0 to nDiv (only active domain, ignore boundary cells)
       if (i == 2) {
@@ -76,7 +90,10 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   Mg = tot_Mg[pos];
   ++pos;
 
-  // Get acceleration from gravity of the envelope
+  // Will: so pos=0 initially, then you increment pos+1 but you're not sure how many steps will be incremented, 
+  // and then you never reset it to zero (that's the 'static' property), so this will eventually crash;
+  // the cleanest way is to identify the cell index 'i' given its location 'x1', there are various ways to do this.
+
   g[IDIR] = -Mg*g_inputParam[G]/(x1*x1);
   g[JDIR] = 0.0;
   g[KDIR] = 0.0;
