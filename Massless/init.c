@@ -56,6 +56,7 @@ void Analysis (const Data *d, Grid *grid)
   fclose(fp);
   
   //I don't know how to execute it only once so I let it run anyway:P
+  //Also I did not do this in init because it seems to loop over more cells than the DOM_LOOP command
   sprintf (fname, "%s/coordinate.txt",RuntimeGet()->output_dir);
   fp = fopen(fname,"w");
   DOM_LOOP(k,j,i){
