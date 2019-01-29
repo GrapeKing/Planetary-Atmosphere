@@ -55,6 +55,7 @@ void Analysis (const Data *d, Grid *grid)
   fprintf(fp,"\n");
   fclose(fp);
   
+  //I don't know how to execute it only once so I let it run anyway:P
   sprintf (fname, "%s/coordinate.txt",RuntimeGet()->output_dir);
   fp = fopen(fname,"w");
   DOM_LOOP(k,j,i){
