@@ -7,8 +7,6 @@ r = np.log(np.loadtxt("coordinate.txt"))
 
 rho = np.log(np.loadtxt("density.txt"))
 
-total = len(rho)
-
 fig, ax = plt.subplots()
 
 line, = ax.plot(r, np.linspace(5,0,len(r)),label='Numerical')
@@ -24,7 +22,6 @@ def animate(i):
 
 ani = anim.FuncAnimation(
 	fig, animate, interval = 1, save_count = 2000)
-
 
 Writer = anim.writers['ffmpeg']
 writer = Writer(fps=24, metadata=dict(artist='Me'), bitrate=1800)
