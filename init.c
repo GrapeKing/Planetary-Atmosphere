@@ -90,9 +90,10 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   Mg = tot_Mg[pos];
   ++pos;
 
-  // Will: so pos=0 initially, then you increment pos+1 but you're not sure how many steps will be incremented, 
-  // and then you never reset it to zero (that's the 'static' property), so this will eventually crash;
-  // the cleanest way is to identify the cell index 'i' given its location 'x1', there are various ways to do this.
+  // Will: the problem is that you don't know how many times BodyForceVector is actually called (if it includes the ghost cells,
+  // if it is called on the N+1 boundaries of the N cells, if it is called 2 times per timestep if you use RK2 (definitions.h)...
+  // The cleanest way is to identify the cell index 'i' given its location 'x1'; there are various ways to do this
+  // (go through every cell (complexity N^2), use a binary tree (N.logN, optimal), look for neighbors of the previous cell (N but unsafe)
 
   g[IDIR] = -Mg*g_inputParam[G]/(x1*x1);
   g[JDIR] = 0.0;
@@ -114,10 +115,9 @@ void Analysis (const Data *d, Grid *grid)
   FILE *fp;
 
   sprintf (fname, "%s/density.txt",RuntimeGet()->output_dir);
-  // Will: open with "a" to add new rows at the end of the file,
-  // if you store the data row-wise (one space instead of a new line between every element)
-  // a bit annoying that gnuplot cannot read rows, but it will make it easier to have lot's of
-  // data in a single file, capturing the time evolution of the system.
+  // Will: you should open with "a" to add new rows at the end of the file,
+  // so you can put lots of data in a single file, capturing the time evolution of the system.
+  // you could export the radial grid first (boundaries best) and then the current time at the beginning of every row)
   fp = fopen(fname,"w");
   DOM_LOOP(k,j,i){
     fprintf(fp,"%.4e %.4e %.4e\n", x1[i], d->Vc[RHO][k][j][i], g_inputParam[RHOINF]*exp(g_inputParam[BONDI]/x1[i]));
