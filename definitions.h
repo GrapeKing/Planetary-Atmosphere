@@ -2,7 +2,7 @@
 #define  DIMENSIONS                     1
 #define  COMPONENTS                     1
 #define  GEOMETRY                       SPHERICAL
-#define  BODY_FORCE                     (VECTOR+POTENTIAL)
+#define  BODY_FORCE                     POTENTIAL
 #define  FORCED_TURB                    NO
 #define  COOLING                        NO
 #define  RECONSTRUCTION                 LINEAR
@@ -10,6 +10,8 @@
 #define  DIMENSIONAL_SPLITTING          NO
 #define  NTRACER                        0
 #define  USER_DEF_PARAMETERS            4
+#define  INTERNAL_BOUNDARY        	    YES
+
 
 /* -- physics dependent declarations -- */
 
@@ -18,7 +20,6 @@
 #define  THERMAL_CONDUCTION             NO
 #define  VISCOSITY                      NO
 #define  ROTATING_FRAME                 NO
-#define  INTERNAL_BOUNDARY              YES
 
 /* -- user-defined parameters (labels) -- */
 
