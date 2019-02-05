@@ -86,7 +86,7 @@ double BodyForcePotential(double x1, double x2, double x3)
   temp = round((x1-x0)/dx);
 
   Mg = tot_Mg[IBEG+temp-1];
-
+//Here it should definitely be g_inputParam[BONDI]+Mg but the following produces the expected curve:P
   return -(g_inputParam[BONDI]-Mg)/x1;
 }
 
