@@ -6,7 +6,7 @@ from matplotlib.animation import FFMpegWriter
 from scipy import optimize as opt
 from scipy import integrate as intg
 
-save = True
+save = False
 
 rb = 4
 ms = rb
