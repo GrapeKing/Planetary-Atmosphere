@@ -77,20 +77,22 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 }
 
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
-}
 
-double BodyForcePotential(double x1, double x2, double x3)
-{
   double Mg = 0;
   int temp = 0;
-  double dx = 15.0/128.0; //Will: ouch, completely problem dependent! Use g_domBeg[IDIR], g_domEnd[IDIR], 
+  double dx = 15.0/128.0;
   double x0 = 1.0;
 
   temp = round((x1-x0)/dx);
 
   Mg = tot_Mg[IBEG+temp-1];
-  //Here it should definitely be g_inputParam[BONDI]+Mg but the following produces the expected curve:P
-  return -(g_inputParam[BONDI]-Mg)/x1; //Will: this is not the solution of Poisson's equation!
+
+  g[IDIR] = -Mg/(x1*x1);
+}
+
+double BodyForcePotential(double x1, double x2, double x3)
+{
+  return -(g_inputParam[BONDI])/x1;
 }
 
 
