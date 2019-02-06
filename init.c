@@ -6,13 +6,9 @@ double *tot_Mg = NULL;
 
 void Init (double *v, double x1, double x2, double x3)
 {
-  // Set initial conditions
-  //Will: you may want to start with the analytic hydrostatic solution
-  // to help the system relax more quickly?
-  v[RHO] = g_inputParam[RHOINF];
+  v[RHO] = g_inputParam[RHOINF]*exp(-g_inputParam[BONDI]/g_domEnd[IDIR])*exp(g_inputParam[BONDI]/x1);
   v[VX1] = 0.0;
 
-  // Set global sound speed
   g_isoSoundSpeed = g_inputParam[CS];
 
   char fname[512];
@@ -46,7 +42,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   if (side == X1_END){
     BOX_LOOP(box,k,j,i){
       d->Vc[RHO][k][j][i] = g_inputParam[RHOINF];
-      //Will: implemented a linear extrapolation
       d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1]) / (x1[IEND] - x1[IEND-1]);
     }
   }
@@ -60,7 +55,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 
   if (side == 0) {
     DOM_LOOP(k,j,i) {
-      // volume element
+
       dV = 4*M_PI*x1[i]*x1[i] * (grid->xr[IDIR][i] - grid->xl[IDIR][i]);
       mass_gas[i] = d->Vc[RHO][k][j][i]*dV; 
 
@@ -73,7 +68,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   }
 }
 
-// Gravity acceleration for the gas alone
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
   /* Will: problems with this implementation:
@@ -86,9 +80,10 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   / you will need the location of the cells on a global context, an then either: 
   / loop over all indices (complexity N), use a binary tree (logN, optimal), or check the neighbors of the previously used cell (complexity 1, but sometimes unsafe)
   */
+  int i, j, k;
   double Mg = 0;
   int temp = 0;
-  double dx = 15.0/128.0;
+  double dx = (g_domEnd[IDIR]-g_domBeg[IDIR])/256.0;
   double x0 = 1.0;
 
   temp = round((x1-x0)/dx);
@@ -112,15 +107,14 @@ void Analysis (const Data *d, Grid *grid) {
   static int call = 0; 
 
   if (first_call == 1) {
-    // Initializing the output files
-    first_call = 0; // now zero for every subsequent call
+    first_call = 0;
     fp = fopen("coordinate.txt","a");
 
     //fprintf(fp,"%.4e ",g_domBeg[0]); // coordinate of the inner boundary
     DOM_LOOP(k,j,i){
       fprintf(fp,"%.4e ",grid->x[IDIR][i]); // coordinate of every cell boundary
     }
-    fprintf(fp,"\n"); // new line
+    fprintf(fp,"\n");
     fclose(fp);
   }
 

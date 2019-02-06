@@ -11,11 +11,11 @@ save = False
 rb = 4
 ms = rb
 # B.g. density
-roubg = 0.00057
+roubg = 0.00056
 rou0 = roubg*np.exp(-1/4)
 
 # No. of steps
-div = 128
+div = 256
 
 # differentiation approx order
 o = 3
