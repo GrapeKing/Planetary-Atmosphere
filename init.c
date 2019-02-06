@@ -3,12 +3,13 @@
 
 double *mass_gas = NULL;
 double *tot_Mg = NULL;
-int num_div = 0;
 
 void Init (double *v, double x1, double x2, double x3)
 {
   // Set initial conditions
-  v[RHO] = g_inputParam[RHOINF]; //Will: you may want to start with the analytic hydrostatic solution
+  //Will: you may want to start with the analytic hydrostatic solution
+  // to help the system relax more quickly?
+  v[RHO] = g_inputParam[RHOINF];
   v[VX1] = 0.0;
 
   // Set global sound speed
@@ -30,7 +31,7 @@ void InitDomain (Data *d, Grid *grid) {
   static int first_call = 1;
   if (first_call == 1) {
     first_call = 0;
-    mass_gas = (double *) malloc(grid->np_tot[IDIR]*sizeof(double)); //Will: removed the 'num_div' thing
+    mass_gas = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     tot_Mg = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
   }
 }
@@ -45,19 +46,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   if (side == X1_END){
     BOX_LOOP(box,k,j,i){
       d->Vc[RHO][k][j][i] = g_inputParam[RHOINF];
-      //If the following is added I get oscillations:
-      //Will: you still need to impose something; here you are extrapolating VX1 with a constant value,
-      //but if the gas wants to fall, then there is a good chance that the velocity profile will not be flat,
-      //for example with rho=constant, the velocity will tend to vary as 1/r^2 (div(rho.v)=0, no sound waves);
-      //maybe try a linear extrapolation? Otherwise, are the oscillations sustained/amplified, or damped over time?
-      //d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND];
+      //Will: implemented a linear extrapolation
+      d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1]) / (x1[IEND] - x1[IEND-1]);
     }
   }
 
   if (side == X1_BEG) {
       BOX_LOOP(box,k,j,i){
-	d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i]; //Will: symmetrizing the density, 
-	d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i]; // anti-symmetrizing the velocity --> no mass flux
+	d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i];
+	d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i];
     }
   }
 
@@ -76,8 +73,19 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   }
 }
 
+// Gravity acceleration for the gas alone
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
+  /* Will: problems with this implementation:
+  / 1. 15.0 and 128.0 are problem dependent = danger!
+  / --> Use g_domEnd[IDIR]-g_domBeg[IDIR], and extract the 128 from another function (global variable?)
+  / 2. You are using a logarithmic grid ('l+' in pluto.ini), so (x1-x0)/dx is not at the appropriate cell!
+  / 3. optional: this version won't be parallelized well...
+  /
+  / My advice: design a function with prototype that takes x1 as a parameter and returns the integer index of the corresponding cell; 
+  / you will need the location of the cells on a global context, an then either: 
+  / loop over all indices (complexity N), use a binary tree (logN, optimal), or check the neighbors of the previously used cell (complexity 1, but sometimes unsafe)
+  */
   double Mg = 0;
   int temp = 0;
   double dx = 15.0/128.0;
@@ -90,14 +98,13 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   g[IDIR] = -Mg/(x1*x1);
 }
 
-double BodyForcePotential(double x1, double x2, double x3)
-{
-  return -(g_inputParam[BONDI])/x1;
+// Gravity potential for the core alone
+double BodyForcePotential(double x1, double x2, double x3) {
+  return -(g_inputParam[BONDI])/x1; 
 }
 
 
-void Analysis (const Data *d, Grid *grid)
-{
+void Analysis (const Data *d, Grid *grid) {
 
   int i,j,k;
   FILE *fp;
