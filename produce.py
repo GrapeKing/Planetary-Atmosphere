@@ -11,7 +11,7 @@ save = False
 rb = 4
 ms = rb
 # B.g. density
-roubg = 0.00056
+roubg = 0.00057
 rou0 = roubg*np.exp(-1/4)
 
 # No. of steps

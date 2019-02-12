@@ -3,6 +3,7 @@
 
 double *mass_gas = NULL;
 double *tot_Mg = NULL;
+double *cor = NULL;
 
 void Init (double *v, double x1, double x2, double x3)
 {
@@ -25,10 +26,15 @@ void Init (double *v, double x1, double x2, double x3)
 
 void InitDomain (Data *d, Grid *grid) {
   static int first_call = 1;
+  int i, j, k;
   if (first_call == 1) {
     first_call = 0;
     mass_gas = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     tot_Mg = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
+    cor = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
+    DOM_LOOP(k,j,i) {
+      cor[i] = grid->x[IDIR][i];
+    }
   }
 }
 
@@ -47,7 +53,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   }
 
   if (side == X1_BEG) {
-      BOX_LOOP(box,k,j,i){
+    BOX_LOOP(box,k,j,i){
 	d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i];
 	d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i];
     }
@@ -82,13 +88,23 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   */
   int i, j, k;
   double Mg = 0;
-  int temp = 0;
-  double dx = (g_domEnd[IDIR]-g_domBeg[IDIR])/256.0;
-  double x0 = 1.0;
+  int temp0 = IBEG;
+  int temp1 = IEND;
+  int try = round((temp0+temp1)/2.0);
+  double xmax = g_domEnd[IDIR];
+  double xmin = g_domBeg[IDIR];
 
-  temp = round((x1-x0)/dx);
+  while (abs(x1 - cor[try])>0.001){
+    if (x1 > cor[try]){
+      temp0 = try;
+      try = round((temp0+temp1)/2.0);
+    }else{
+      temp1 = try;
+      try = round((temp0+temp1)/2.0);
+    }
+  }
 
-  Mg = tot_Mg[IBEG+temp-1];
+  Mg = tot_Mg[try];
 
   g[IDIR] = -Mg/(x1*x1);
 }
