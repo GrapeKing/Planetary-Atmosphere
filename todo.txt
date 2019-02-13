@@ -1,3 +1,10 @@
-_Define optimal settings: grid (boundaries, type of grid, resolution), integration scheme (solver, timestepping,...), boundary conditions (X1_BEG & X1_END, RHO & VX1)
-_Enable data analysis: adapt the data exportation method to visualize the evolution of the system (radial profiles over time, density & velocity), prepare a script to read these files, verify the quality of the results and produce figures
-_include the gas mass in the gravitational potential by radial integration, check
+1. Setup optimisation:
+_initial and boundary conditions that could help reduce the amplitude of the oscillations
+
+2. Data analysis:
+_export the density and velocity radial profiles over time
+_show that the system converges to a steady state, maybe confirm that the oscillations are just sound waves
+
+3. Physics check: 
+_compare your solutions to the predicted non-self-gravitating and stable self-gravitating profiles
+_confirm that a shock form when you predict no self-gravitating equilibrium
