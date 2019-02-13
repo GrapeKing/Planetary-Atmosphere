@@ -5,8 +5,8 @@ double *mass_gas = NULL;
 double *tot_Mg = NULL;
 double *cor = NULL;
 
-void Init (double *v, double x1, double x2, double x3)
-{
+void Init (double *v, double x1, double x2, double x3) {
+  
   v[RHO] = g_inputParam[RHOINF]*exp(-g_inputParam[BONDI]/g_domEnd[IDIR])*exp(g_inputParam[BONDI]/x1);
   v[VX1] = 0.0;
 
@@ -32,8 +32,8 @@ void InitDomain (Data *d, Grid *grid) {
     mass_gas = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     tot_Mg = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     cor = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
-    DOM_LOOP(k,j,i) {
-      cor[i] = grid->x[IDIR][i];
+    TOT_LOOP(k,j,i) { //Will: replaced the DOM loop by a TOT loop (include ghost zones)
+      cor[i] = grid->x[IDIR][i]; //Will: my advice: save the cell boundaries grid->xr[IDIR][i] instead of their center
     }
   }
 }
@@ -54,17 +54,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 
   if (side == X1_BEG) {
     BOX_LOOP(box,k,j,i){
-	d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i];
-	d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i];
+      d->Vc[RHO][k][j][i] = +d->Vc[RHO][k][j][2*IBEG-1-i];
+      d->Vc[VX1][k][j][i] = -d->Vc[VX1][k][j][2*IBEG-1-i];
     }
   }
 
   if (side == 0) {
     DOM_LOOP(k,j,i) {
-
       dV = 4*M_PI*x1[i]*x1[i] * (grid->xr[IDIR][i] - grid->xl[IDIR][i]);
       mass_gas[i] = d->Vc[RHO][k][j][i]*dV; 
-
       if (i == IBEG) {
         tot_Mg[i] = mass_gas[i]; 
       } else {
@@ -76,16 +74,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
-  /* Will: problems with this implementation:
-  / 1. 15.0 and 128.0 are problem dependent = danger!
-  / --> Use g_domEnd[IDIR]-g_domBeg[IDIR], and extract the 128 from another function (global variable?)
-  / 2. You are using a logarithmic grid ('l+' in pluto.ini), so (x1-x0)/dx is not at the appropriate cell!
-  / 3. optional: this version won't be parallelized well...
-  /
-  / My advice: design a function with prototype that takes x1 as a parameter and returns the integer index of the corresponding cell; 
-  / you will need the location of the cells on a global context, an then either: 
-  / loop over all indices (complexity N), use a binary tree (logN, optimal), or check the neighbors of the previously used cell (complexity 1, but sometimes unsafe)
-  */
   int i, j, k;
   double Mg = 0;
   int temp0 = IBEG;
@@ -94,11 +82,14 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
   double xmax = g_domEnd[IDIR];
   double xmin = g_domBeg[IDIR];
 
+  //Will: it is a tree-based search ;-)
+  // the 0.001 comparison is not elegant, but if it works...
+  //(make sure it works with a basic python code if you can!)
   while (abs(x1 - cor[try])>0.001){
     if (x1 > cor[try]){
       temp0 = try;
       try = round((temp0+temp1)/2.0);
-    }else{
+    } else{
       temp1 = try;
       try = round((temp0+temp1)/2.0);
     }
@@ -111,6 +102,10 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
 // Gravity potential for the core alone
 double BodyForcePotential(double x1, double x2, double x3) {
+  //Will: one of the reasons why you get oscillations is that the system is initialized a bit abruptly;
+  // for example, if you start with a constant density and progressively increase the mass of the core
+  // up to its nominal value, then the system is initialized smoothly and the oscillations will be much weaker;
+  // another good trick would be to damp the velocity fluctuations manually near one boundary, inside a "buffer". 
   return -(g_inputParam[BONDI])/x1; 
 }
 
