@@ -7,7 +7,7 @@ double *cor = NULL;
 
 void Init (double *v, double x1, double x2, double x3) {
   
-  v[RHO] = g_inputParam[RHOINF]*exp(-g_inputParam[BONDI]/g_domEnd[IDIR])*exp(g_inputParam[BONDI]/x1);
+  v[RHO] = g_inputParam[RHOINF];
   v[VX1] = 0.0;
 
   g_isoSoundSpeed = g_inputParam[CS];
@@ -48,7 +48,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   if (side == X1_END){
     BOX_LOOP(box,k,j,i){
       d->Vc[RHO][k][j][i] = g_inputParam[RHOINF];
-      d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1]) / (x1[IEND] - x1[IEND-1]);
+      //d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1]) / (x1[IEND] - x1[IEND-1]);
     }
   }
 
@@ -74,18 +74,12 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
-  int i, j, k;
   double Mg = 0;
-  int temp0 = IBEG;
+  int temp0 = IBEG-1;
   int temp1 = IEND;
   int try = round((temp0+temp1)/2.0);
-  double xmax = g_domEnd[IDIR];
-  double xmin = g_domBeg[IDIR];
 
-  //Will: it is a tree-based search ;-)
-  // the 0.001 comparison is not elegant, but if it works...
-  //(make sure it works with a basic python code if you can!)
-  while (abs(x1 - cor[try])>0.001){
+  while (x1 != cor[try]){
     if (x1 > cor[try]){
       temp0 = try;
       try = round((temp0+temp1)/2.0);
@@ -94,8 +88,9 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
       try = round((temp0+temp1)/2.0);
     }
   }
-
-  Mg = tot_Mg[try];
+  
+  //try-1 since we exclude mass of the shell
+  Mg = (tot_Mg[try-1]+tot_Mg[try])/2.0;
 
   g[IDIR] = -Mg/(x1*x1);
 }

@@ -5,13 +5,14 @@ import matplotlib.animation as anim
 from matplotlib.animation import FFMpegWriter
 from scipy import optimize as opt
 from scipy import integrate as intg
+import time
 
 save = False
 
 rb = 4
 ms = rb
 # B.g. density
-roubg = 0.00057
+roubg = 0.000573
 rou0 = roubg*np.exp(-1/4)
 
 # No. of steps
