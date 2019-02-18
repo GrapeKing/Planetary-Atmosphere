@@ -32,8 +32,8 @@ void InitDomain (Data *d, Grid *grid) {
     mass_gas = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     tot_Mg = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
     cor = (double *) malloc(grid->np_tot[IDIR]*sizeof(double));
-    TOT_LOOP(k,j,i) { //Will: replaced the DOM loop by a TOT loop (include ghost zones)
-      cor[i] = grid->x[IDIR][i]; //Will: my advice: save the cell boundaries grid->xr[IDIR][i] instead of their center
+    TOT_LOOP(k,j,i) {
+      cor[i] = grid->x[IDIR][i];
     }
   }
 }
@@ -44,11 +44,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
   int i, j, k;
   double *x1 = grid->x[IDIR];
   double dV;
-
+  
   if (side == X1_END){
     BOX_LOOP(box,k,j,i){
       d->Vc[RHO][k][j][i] = g_inputParam[RHOINF];
-      //d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][IEND] + (x1[i] - x1[IEND]) * (d->Vc[VX1][k][j][IEND] - d->Vc[VX1][k][j][IEND-1]) / (x1[IEND] - x1[IEND-1]);
+      d->Vc[VX1][k][j][i] = d->Vc[VX1][k][j][2*IEND+1-i];
     }
   }
 
@@ -61,47 +61,57 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid) {
 
   if (side == 0) {
     DOM_LOOP(k,j,i) {
-      dV = 4*M_PI*x1[i]*x1[i] * (grid->xr[IDIR][i] - grid->xl[IDIR][i]);
+      dV = 4.0/3.0*M_PI*(pow(grid->xr[IDIR][i],3) - pow(grid->xl[IDIR][i],3));
       mass_gas[i] = d->Vc[RHO][k][j][i]*dV; 
       if (i == IBEG) {
         tot_Mg[i] = mass_gas[i]; 
       } else {
         tot_Mg[i] = mass_gas[i] + tot_Mg[i-1];
       }
+      //Will:
+      //Outer buffer to help killing wave reflections
+      if (g_time<4*g_domEnd[0]/g_isoSoundSpeed) {
+	if (x1[i]>g_domEnd[0]-1.0) d->Vc[VX1][k][j][i] *= exp(-0.5*g_dt*g_isoSoundSpeed);
+      }
     }
   }
 }
+
+
+// Tree-searching for an element in an ordered array
+/* ************************************************* */
+int binary_search(double* A, double x, int imin, int imax) {
+  int imid;
+  while (imin <= imax) {
+    imid = (imin+imax)/2;
+    if (x>=A[imid] && x<A[imid+1]) {
+      return imid;
+    } else if (x>A[imid]) {
+      imin = imid + 1;
+    } else {
+      imax = imid - 1;
+    }
+  }
+  return 0; //necessary when searching in an empty array
+}
+
+
 
 void BodyForceVector(double *v, double *g, double x1, double x2, double x3) {
 
   double Mg = 0;
-  int temp0 = IBEG-1;
-  int temp1 = IEND;
-  int try = round((temp0+temp1)/2.0);
-
-  while (x1 != cor[try]){
-    if (x1 > cor[try]){
-      temp0 = try;
-      try = round((temp0+temp1)/2.0);
-    } else{
-      temp1 = try;
-      try = round((temp0+temp1)/2.0);
-    }
-  }
-  
-  //try-1 since we exclude mass of the shell
-  Mg = (tot_Mg[try-1]+tot_Mg[try])/2.0;
-
+  int i = binary_search(cor, x1, 0, NX1_TOT-1);
+  Mg = tot_Mg[i]; //Will: removed the danger of tot_Mg[i-1] being out of bounds
   g[IDIR] = -Mg/(x1*x1);
 }
 
+
 // Gravity potential for the core alone
 double BodyForcePotential(double x1, double x2, double x3) {
-  //Will: one of the reasons why you get oscillations is that the system is initialized a bit abruptly;
-  // for example, if you start with a constant density and progressively increase the mass of the core
-  // up to its nominal value, then the system is initialized smoothly and the oscillations will be much weaker;
-  // another good trick would be to damp the velocity fluctuations manually near one boundary, inside a "buffer". 
-  return -(g_inputParam[BONDI])/x1; 
+  double dbdt = 1.0; // d[Bondi]/dt
+  double bondi = dbdt * g_time;
+  if (bondi>g_inputParam[BONDI]) bondi = g_inputParam[BONDI];
+  return -bondi/x1; 
 }
 
 
